@@ -1,0 +1,13 @@
+model,variation,total,exact_correct,verified_correct,exact_accuracy,verified_accuracy
+DeepSeek-LLM-7B-Chat,node_deletion,52,1,1,1.9,1.9
+DeepSeek-LLM-7B-Chat,edge_deletion,52,1,1,1.9,1.9
+DeepSeek-Math-7B-Instruct,node_deletion,52,5,5,9.6,9.6
+DeepSeek-Math-7B-Instruct,edge_deletion,52,3,3,5.8,5.8
+InternLM2-Math-7B,node_deletion,52,3,3,5.8,5.8
+InternLM2-Math-7B,edge_deletion,52,3,3,5.8,5.8
+InternLM2-Chat-7B,node_deletion,52,1,1,1.9,1.9
+InternLM2-Chat-7B,edge_deletion,52,2,2,3.8,3.8
+Qwen2.5-7B-Instruct,node_deletion,52,5,5,9.6,9.6
+Qwen2.5-7B-Instruct,edge_deletion,52,6,6,11.5,11.5
+Qwen2.5-Math-7B-Instruct,node_deletion,52,6,6,11.5,11.5
+Qwen2.5-Math-7B-Instruct,edge_deletion,52,7,7,13.5,13.5
