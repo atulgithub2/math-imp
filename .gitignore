@@ -1,0 +1,32 @@
+# API keys and secrets
+.env
+keys-api.txt
+
+# Python
+venv-mathimp/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Large result JSON files (keep CSVs)
+results/**/*.json
+results/**/*.jsonl
+
+# Checklist model responses and analysis (large, regenerable)
+checklist/**/model_responses/
+checklist/**/checklist_analysis*/
+
+# Archive folder (frozen old data)
+archive/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

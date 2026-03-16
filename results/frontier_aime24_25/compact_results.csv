@@ -1,0 +1,60 @@
+model,split,problem_idx,variant,original_answer,predicted_answer,is_correct_exact,input_tokens,output_tokens,error
+grok,AIME24,0,original,204,204,True,883,1518,
+grok,AIME24,3,original,321,321,True,801,5064,
+grok,AIME24,1,original,113,113,True,852,8646,
+deepseek,AIME24,0,original,204,204,True,205,6554,
+grok,AIME24,7,original,236,236,True,825,6109,
+grok,AIME24,9,original,33,33,True,889,1999,
+grok,AIME24,8,original,45,45,True,871,4091,
+grok,AIME24,11,original,55,55,True,810,2635,
+deepseek,AIME24,8,original,45,45,True,192,6814,
+grok,AIME24,12,original,104,104,True,822,9455,
+deepseek,AIME24,9,original,33,33,True,210,8448,
+deepseek,AIME24,11,original,55,55,True,133,7567,
+grok,AIME24,17,original,110,110,True,813,9193,
+grok,AIME24,18,original,721,721,True,838,11994,
+grok,AIME24,19,original,25,25,True,795,4158,
+grok,AIME24,20,original,809,809,True,848,3295,
+grok,AIME24,21,original,116,116,True,870,3246,
+grok,AIME24,22,original,104,104,True,889,3750,
+grok,AIME24,24,original,540,540,True,792,1573,
+grok,AIME24,23,original,294,294,True,804,6083,
+grok,AIME24,27,original,73,73,True,849,2109,
+grok,AIME24,25,original,197,197,True,840,10229,
+grok,AIME24,26,original,480,480,True,832,9858,
+grok,AIME24,29,original,601,601,True,822,8732,
+grok,AIME24,28,original,468,468,True,797,14314,
+deepseek,AIME24,20,original,809,809,True,170,7683,
+deepseek,AIME24,19,original,25,25,True,117,4535,
+grok,AIME24,13,original,699,699,True,819,9033,
+deepseek,AIME24,27,original,73,73,True,172,4492,
+grok,AIME24,14,original,127,127,True,1121,8807,
+grok,AIME24,15,original,902,902,True,845,9058,
+grok,AIME24,2,original,23,23,True,921,7249,
+grok,AIME24,5,original,211,211,True,877,17443,
+grok,AIME24,4,original,371,,False,0,0,
+grok,AIME24,6,original,315,,False,0,0,
+grok,AIME24,10,original,80,,False,0,0,
+grok,AIME24,16,original,385,,False,0,0,
+deepseek,AIME24,28,original,468,468,True,119,4978,
+deepseek,AIME24,21,original,116,116,True,192,6423,
+deepseek,AIME24,29,original,601,601,True,145,11485,
+deepseek,AIME24,1,original,113,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,2,original,23,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,4,original,371,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,5,original,211,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,6,original,315,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,7,original,236,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,10,original,80,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,12,original,104,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,13,original,699,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,14,original,127,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,15,original,902,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,16,original,385,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,18,original,721,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,22,original,104,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,23,original,294,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,24,original,540,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,25,original,197,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,26,original,480,,False,0,0,"HTTP 402: This request requires more credits, or fewer max_tokens. You requested up to 4096 tokens, but can only afford 528. To increase, visit https://openrouter.ai/settings/keys and create a key with a higher total limit"
+deepseek,AIME24,17,original,110,,False,0,0,HTTP 403: Key limit exceeded (total limit). Manage it using https://openrouter.ai/settings/keys

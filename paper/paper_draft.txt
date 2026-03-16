@@ -1,0 +1,527 @@
+================================================================================
+MATH-IMP PAPER DRAFT
+================================================================================
+
+--------------------------------------------------------------------------------
+TITLE OPTIONS
+--------------------------------------------------------------------------------
+
+1. "Detecting LLM Memorization in Mathematical Reasoning via Underdetermined
+   Problem Variants"
+2. "Math-Imp: A Benchmark for Probing Answer Recall in Large Language Models"
+3. "When Models Know the Answer Without Reading the Question: Probing
+   Memorization in Mathematical Reasoning"
+
+Recommendation: Option 1 — most precise, avoids loaded word "contamination."
+
+
+--------------------------------------------------------------------------------
+ABSTRACT
+--------------------------------------------------------------------------------
+
+Large language models (LLMs) achieve striking performance on mathematical
+competition benchmarks, raising the question of whether this reflects genuine
+reasoning or memorization of training data. We introduce Math-Imp, a benchmark
+of 180 underdetermined variants of 90 AIME competition problems (2024-2026),
+constructed by surgically removing critical information from each problem so
+that no unique answer can be derived from the given information alone. We verify
+impossibility via two complementary methods — node deletion (removing a
+critical numerical given) and edge deletion (removing a critical mathematical
+relationship) — and confirm that 99.4% of variants (179/180) cannot be solved
+by structural reasoning, using a 4-stage LLM judge pipeline. A model that
+produces the original correct answer on an underdetermined variant must be
+recalling information absent from the problem statement. We evaluate six
+7B-parameter models and eleven frontier models. Small models (7B) show
+consistent memorization signals: up to 6.67% pass@10 and 83.3% pass@50 on
+underdetermined variants for problems they can solve originally. Among frontier
+models, Claude Opus 4.6 exhibits the strongest signal — achieving a 45.0%
+unique-impossible hit rate on AIME 2024+2025 — while models evaluated on AIME
+2026 (a competition held after most training cutoffs) show substantially lower
+hit rates, suggesting that memorization decreases for temporally fresh problems.
+Our results demonstrate that underdetermined variants provide a clean,
+interpretable signal for distinguishing answer recall from mathematical
+reasoning.
+
+
+--------------------------------------------------------------------------------
+1. INTRODUCTION
+--------------------------------------------------------------------------------
+
+Competition mathematics benchmarks such as AIME and MATH have become de facto
+standards for measuring the mathematical reasoning capabilities of large
+language models. Recent frontier models achieve 60-100% accuracy on AIME 2024
+problems under single-rollout evaluation. However, high benchmark accuracy
+alone does not distinguish two fundamentally different behaviors: (1) the model
+genuinely solving the problem from its stated constraints, or (2) the model
+recognizing a familiar problem and recalling a memorized answer.
+
+This distinction matters both scientifically and practically. If benchmark
+performance reflects memorization rather than reasoning, it inflates perceived
+capability, misleads capability assessments, and renders these benchmarks
+unreliable as proxies for generalization. Standard contamination detection
+methods — such as n-gram overlap between training data and benchmark problems
+— are insufficient: they can detect whether a problem was seen, but not whether
+the model is *using* that memorized knowledge at inference time.
+
+We propose a behavioral test: present a model with a version of a competition
+problem from which critical information has been removed, making the problem
+unsolvable from the given information alone. A model that reasons from the
+problem statement must either report that the problem is underdetermined or
+produce an answer inconsistent with the original. A model that recalls a
+memorized answer will tend to produce the original correct answer regardless of
+the missing information.
+
+We formalize this into a benchmark construction pipeline and evaluation
+methodology, and contribute:
+
+- Math-Imp: 180 underdetermined variants of 90 AIME problems (2024, 2025,
+  2026), in two variant types (node deletion and edge deletion), with 99.4%
+  certified as genuinely underdetermined.
+
+- A 3-phase DAG-based generation pipeline that programmatically verifies
+  impossibility via code execution, then uses an LLM judge to verify structural
+  similarity and underdetermination.
+
+- A 4-stage quality control system to classify deletion strength
+  (STRONG/WEAK_FILLABLE/BORDERLINE/SOLVABLE) and filter or regenerate weak
+  variants.
+
+- Empirical findings showing measurable memorization signals in 7B models and
+  differentiated signals in frontier models correlated with problem recency.
+
+
+--------------------------------------------------------------------------------
+2. RELATED WORK
+--------------------------------------------------------------------------------
+
+Benchmark contamination. Several works have studied training data contamination
+in LLMs [CITE]. Methods include membership inference attacks, n-gram overlap
+detection, and canary insertion. These approaches test whether a benchmark was
+seen during training but do not test whether memorized knowledge is used at
+inference time. Our work targets the latter.
+
+Mathematical reasoning benchmarks. MATH [CITE], AIME, AMC, and similar
+benchmarks have been widely used. Recent work [CITE] has raised concerns about
+benchmark saturation and contamination. [CITE] showed that performance on
+modified versions of MATH-500 problems drops significantly for some models,
+suggesting some performance is memorization-dependent. Our work provides a more
+controlled methodology with programmatic impossibility guarantees.
+
+LLM-generated variants. Prior work has used LLMs to paraphrase or rephrase
+problems [CITE], but without formal guarantees that variants are truly
+underdetermined. Our approach couples LLM-generated modifications with code
+execution to provide an execution-level impossibility certificate.
+
+Probing reasoning vs. recall. [CITE] distinguish reasoning from
+pattern-matching using counterfactual variants. [CITE] analyze whether models
+"reason through" problems or shortcut to answers. Our work operationalizes this
+distinction through underdetermined problems where reasoning is provably
+insufficient.
+
+
+--------------------------------------------------------------------------------
+3. PROBLEM FORMULATION
+--------------------------------------------------------------------------------
+
+Let P be a math competition problem with unique correct answer a*. We define
+an underdetermined variant P~ as a modification of P such that:
+
+  1. P~ is structurally similar to P (recognizably the same problem type).
+  2. P~ has no unique answer derivable from its stated constraints: for any
+     candidate answer c, there exists a consistent interpretation of P~ with
+     answer c' != c.
+
+A model M is said to exhibit answer recall on P~ if M(P~) = a*, since a* is
+not uniquely determined by P~.
+
+We operationalize condition (2) via an execution certificate: we generate
+Python code that computes the answer from problem data, then modify the code to
+reference an undefined variable. Code execution produces a NameError,
+confirming computationally that no answer can be derived from the remaining
+information.
+
+
+--------------------------------------------------------------------------------
+4. BENCHMARK CONSTRUCTION
+--------------------------------------------------------------------------------
+
+4.1 Source Problems
+-------------------
+We use 90 AIME competition problems: 30 from AIME 2024, 30 from AIME 2025, and
+30 from AIME 2026. All answers are integers in [0, 999].
+
+4.2 Three-Phase Generation Pipeline
+------------------------------------
+Phase 1: Code Generation and DAG Construction.
+
+Given a problem statement, solution, and answer, we prompt Claude Opus 4.6
+(via AWS Bedrock) to:
+
+(a) Write algorithmic Python code that computes the answer (never hardcoded).
+    We execute the code and verify it produces a* using a 5-layer verification
+    stack: string match, numeric comparison (tolerance 1e-6), LaTeX
+    normalization, SymPy symbolic comparison, and LLM equivalence check.
+
+(b) Construct a DAG representing the problem's information structure, with node
+    types (given, unknown, derived_info, relationship, constraint) and edge
+    types (determines, constrains, relates_to, defines_domain, references).
+
+Phase 2: Underdetermination via Two Deletion Strategies.
+
+We generate two independently verified underdetermined variants per problem:
+
+- Node deletion (Variation 1): Remove a critical numerical given from the
+  problem statement and its corresponding variable from the code. The modified
+  code must reference an undefined variable, producing a natural NameError.
+  The removed value must not be deducible from remaining information.
+
+- Edge deletion (Variation 2): Remove or obscure a critical mathematical
+  relationship or constraint. The affected variables transition from given to
+  unknown in the DAG. Again, the modified code must naturally error.
+
+Both methods explicitly forbid artificial raise statements; the error must
+arise from the structural removal. Up to 5 retries per variant, with failure
+feedback provided to the generator.
+
+Phase 3: LLM Judge Verification.
+
+An independent LLM judge (Claude Opus 4.6) evaluates each variant on two
+dimensions:
+
+- Similarity (1-10, threshold >= 5): the variant is recognizably the same
+  problem type.
+- Underdetermination (1-10, threshold >= 7): the variant is genuinely
+  unsolvable without the removed information.
+
+The judge is prompted to attempt to solve the variant and track all assumptions
+made. If assumptions are arbitrary (no principled basis), underdetermination
+is high. If assumptions are uniquely recoverable from context,
+underdetermination is low.
+
+4.3 Generation Statistics
+--------------------------
+Applied to a pilot of 100 MATH Level-5 problems: 52% node-deletion success,
+51% edge-deletion success, 51% both-variant success. For AIME 2024-2026, all
+90 problems were successfully processed (with 3 AIME 2026 problems requiring
+manual generation due to API interruptions).
+
+4.4 Deletion Quality Certification
+------------------------------------
+The LLM judge used in Phase 3 can be overly permissive. We introduce a
+separate 4-stage quality control pipeline to certify each variant's deletion
+strength:
+
+Verdict categories:
+- STRONG: No principled reconstruction path. More than 5 equally plausible
+  fills exist.
+- WEAK_FILLABLE: A unique reconstruction path exists via structural reasoning
+  or elimination.
+- BORDERLINE: 3-5 plausible fills exist; a smart guesser could enumerate them.
+- SOLVABLE: The variant is actually solvable as stated (deletion failed).
+
+Stage 1 (v3 strict): Claude Sonnet 4.6 evaluates all 174 initial variants with
+a strict, STRONG-biased prompt.
+Result: 171 STRONG, 2 non-STRONG, 1 SOLVABLE.
+
+Stage 2 (v4 calibrated, solve>0 cases): Re-evaluate the 66 variants where at
+least one model produced the original answer, using a calibrated prompt that
+reduces false-STRONG bias. Introduces the symmetry_or_natural_default
+reconstruction method.
+Result: 8 flipped STRONG -> non-STRONG.
+
+Stage 3 (Haiku v5 sweep, 0-solve cases): Apply a deliberately aggressive
+variant (requiring >8 plausible fills for STRONG) to the 108 variants with
+zero memorization hits.
+Result: 27 non-STRONG flags.
+
+Stage 4 (Sonnet v4 verification): Verify Haiku flags with the calibrated
+Sonnet prompt.
+Result: 26/27 confirmed STRONG; 1 confirmed non-STRONG.
+
+Final counts (after manual regeneration of flagged variants):
+
+  Split       | Variants | STRONG | Dropped
+  ------------|----------|--------|--------
+  AIME 2024   |    60    |   60   |    0
+  AIME 2025   |    60    |   59   |    1
+  AIME 2026   |    60    |   60   |    0
+  Total       |   180    |  179   |    1
+
+The single dropped variant (AIME 2025 p5 edge) is inherently resistant to
+underdetermination: its three components (ground set, operation, target value)
+form a self-referential triangle where any two reconstruct the third via
+standard competition conventions.
+
+
+--------------------------------------------------------------------------------
+5. EXPERIMENTS
+--------------------------------------------------------------------------------
+
+5.1 Setup
+----------
+Small models (6 total, 7B parameters, local vLLM inference):
+  DeepSeek-LLM-7B-Chat, DeepSeek-Math-7B-Instruct, InternLM2-Chat-7B,
+  InternLM2-Math-7B, Qwen2.5-7B-Instruct, Qwen2.5-Math-7B-Instruct.
+
+Frontier models (AIME24+25, 10 models, pass@1):
+  Claude Opus 4.6, Claude Sonnet 4.5, DeepSeek-R1, DeepSeek-V3.2, Grok-4,
+  GLM-4.7, Kimi-K2.5, Llama4-Maverick, Mistral-Large-3, Nova-Premier.
+
+Frontier models (AIME2026, 11 models, pass@5):
+  Claude Sonnet 4.6, Claude Sonnet 3.7, DeepSeek-R1, DeepSeek-V3.2,
+  Kimi-K2.5, Grok-4.2, Llama4-Maverick, Mistral-Large-3, Nova-Premier
+  + GPT-5.2, Gemini 3 (data quality issues — verify before reporting).
+
+Evaluation protocol:
+- Pass@k: at least 1 of k rollouts produces the correct answer.
+- Memorization hit: on an underdetermined variant, the model outputs a value
+  equal to a* (the original answer). Since a* is not derivable from P~, this
+  constitutes answer recall.
+- Answer correctness computed as:
+    str(predicted).strip() == str(original_answer).strip()
+  (The is_correct_exact column in raw CSVs is unreliable and was NOT used.)
+
+5.2 Small Model Results (AIME24+25, Pass@10)
+----------------------------------------------
+Base problem accuracy:
+
+  Model                      | Solved/60 | Pass@10
+  ---------------------------|-----------|--------
+  Qwen2.5-Math-7B-Instruct   |   13/60   |  21.7%
+  Qwen2.5-7B-Instruct        |   11/60   |  18.3%
+  DeepSeek-Math-7B-Instruct  |    5/60   |   8.3%
+  DeepSeek-LLM-7B-Chat       |    1/60   |   1.7%
+  InternLM2-Chat-7B          |    1/60   |   1.7%
+  InternLM2-Math-7B          |    0/60   |   0.0%
+
+Underdetermined variant hit rate (memorization signal):
+
+  Model                      | Hits/120 | Hit Rate
+  ---------------------------|----------|----------
+  Qwen2.5-Math-7B-Instruct   |   8/120  |   6.7%
+  Qwen2.5-7B-Instruct        |   6/120  |   5.0%
+  DeepSeek-Math-7B-Instruct  |   3/120  |   2.5%
+  InternLM2-Math-7B          |   2/120  |   1.7%
+  InternLM2-Chat-7B          |   1/120  |   0.8%
+  DeepSeek-LLM-7B-Chat       |   0/120  |   0.0%
+
+The relative ranking is preserved between base and variant performance,
+consistent with the hypothesis that memorization scales with training exposure.
+
+5.3 Pass@50 Deep Dive (7B Models)
+-----------------------------------
+On problems where a model correctly solved the original (i.e., demonstrably
+capable), how often does it produce the original answer on the underdetermined
+variant with 50 rollouts?
+
+  Model                      | Pass@1  | Pass@10 | Pass@50
+  ---------------------------|---------|---------|--------
+  Qwen2.5-7B-Instruct        |  33.3%  |  66.7%  |  83.3%
+  Qwen2.5-Math-7B-Instruct   |   0.0%  |  12.5%  |  50.0%
+  DeepSeek-Math-7B-Instruct  |   0.0%  |  33.3%  |  33.3%
+  InternLM2-Math-7B          |   0.0%  |   0.0%  |   0.0%
+  InternLM2-Chat-7B          |   0.0%  |   0.0%  |   0.0%
+
+Qwen2.5-7B-Instruct produces the original correct answer on 83.3% of
+underdetermined variants (for problems it solved originally) across 50 rollouts.
+Since these variants have no derivable answer, this rate reflects memorization
+— the model stochastically recalls the correct answer as it generates more
+attempts.
+
+5.4 Frontier Model Results (AIME24+25, Pass@1)
+------------------------------------------------
+"Unique Imp. Hits" = problem counted once if either node or edge variant
+produced the original answer.
+
+  Model              | Base (60p)      | Unique Imp. Hits (60p)
+  -------------------|-----------------|------------------------
+  Claude Opus 4.6    | 48/60 (80.0%)   |   27/60 (45.0%)  ***
+  Kimi-K2.5          | 38/60 (63.3%)   |   11/60 (18.3%)
+  DeepSeek-R1        | 48/60 (80.0%)   |    3/60  (5.0%)
+  Mistral-Large-3    | 23/60 (38.3%)   |    3/60  (5.0%)
+  DeepSeek-V3.2      | 31/60 (51.7%)   |    2/60  (3.3%)
+  GLM-4.7            | 29/60 (48.3%)   |    2/60  (3.3%)
+  Claude Sonnet 4.5  | 27/60 (45.0%)   |    2/60  (3.3%)
+  Llama4-Maverick    | 15/60 (25.0%)   |    2/60  (3.3%)
+  Nova-Premier       | 10/60 (16.7%)   |    1/60  (1.7%)
+  Grok-4             | 26/60 (43.3%)   |    0/60  (0.0%)
+
+Claude Opus 4.6 stands out: it achieves the joint-highest base accuracy (with
+DeepSeek-R1) and the highest underdetermined variant hit rate by a large margin
+(45% vs. 18.3% for the next highest). Grok-4 is notable in the opposite
+direction: high base accuracy with zero memorization hits.
+
+Breakdown for Claude Opus 4.6:
+  AIME24: 30/30 base (100%), Node 14/30 (46.7%), Edge 11/30 (36.7%),
+          Unique 17/30 (56.7%)
+  AIME25: 18/30 base (60.0%), Node  5/30 (16.7%), Edge  8/30 (26.7%),
+          Unique 10/30 (33.3%)
+
+5.5 Frontier Model Results (AIME2026, Pass@5)
+----------------------------------------------
+AIME 2026 problems were released after the training cutoff of most evaluated
+models. Evaluation used pass@5 (5 rollouts per problem, 27 problems with
+variants = 135 run-problem pairs per variant type).
+
+IMPORTANT CAVEAT: These numbers include hits on variants later identified as
+weak (reconstructable). Problems 7, 18, 21, and 25 account for 74 of all hits
+(p18=41, p21=11, p7=10, p25=7) due to insufficiently strong deletions. These
+weak variants have been replaced in the published benchmark (bench9) but
+frontier re-evaluation is pending. The numbers below overestimate genuine
+memorization.
+
+Per-run hit rates (hits / 135 run-problem pairs):
+
+  Model          | Node Del    | Edge Del    | Base Acc (150 runs)
+  ---------------|-------------|-------------|--------------------
+  DeepSeek-V3.2  | 9/135 (6.7%)| 7/135 (5.2%)| 99/150 (66.0%)
+  Sonnet 4.6     | 8/135 (5.9%)| 8/135 (5.9%)| 96/150 (64.0%)
+  Kimi-K2.5      | 6/135 (4.4%)| 8/135 (5.9%)| 87/150 (58.0%)
+  Mistral-Lg3    | 6/135 (4.4%)| 6/135 (4.4%)| 64/150 (42.7%)
+  DeepSeek-R1    | 5/135 (3.7%)| 5/135 (3.7%)| 76/150 (50.7%)
+  Sonnet 3.7     | 2/135 (1.5%)| 3/135 (2.2%)| 23/150 (15.3%)
+  Nova-Premier   | 1/135 (0.7%)| 0/135 (0.0%)| 14/150  (9.3%)
+  Llama4-Mav     | 0/135 (0.0%)| 0/135 (0.0%)| 32/150 (21.3%)
+  Grok-4.2       | 0/135 (0.0%)| 0/135 (0.0%)|  0/150  (0.0%) [verify]
+  GPT-5.2        | 0/135 (0.0%)| 0/135 (0.0%)|  0/150  (0.0%) [verify]
+  Gemini 3       | 0/135 (0.0%)| 0/135 (0.0%)|  0/150  (0.0%) [verify]
+
+
+--------------------------------------------------------------------------------
+6. ANALYSIS
+--------------------------------------------------------------------------------
+
+6.1 Memorization Scales with Problem Recency
+---------------------------------------------
+Comparing the same models across AIME24+25 (older, heavily benchmarked) vs.
+AIME26 (fresh), memorization hit rates decrease substantially for all models.
+This is consistent with the hypothesis that models memorize specific benchmark
+answers during training, and that this signal is weaker for problems that
+postdate the training cutoff.
+
+6.2 Reasoning Propagation Analysis
+------------------------------------
+(Include if space allows.)
+
+We applied an LLM judge (Claude Opus 4.6) to analyze 720 (model, problem,
+variant) triples — 6 small models x 60 problems x 2 variant types — asking:
+do the question's changes propagate into different reasoning steps? A
+propagation score < 5 indicates the model's reasoning was largely unchanged
+between base and variant, suggesting the model did not notice the missing
+information.
+
+Low-performing models (e.g., DeepSeek-LLM-7B-Chat) show consistently low
+propagation — they fail both base and variant for identical reasons, not
+because they detected that information was missing. Higher-performing models
+show higher propagation, though this does not prevent memorization hits.
+
+6.3 Model Capability Does Not Explain Away the Signal
+-------------------------------------------------------
+One could argue that models fail underdetermined variants simply because they
+cannot solve hard AIME problems, not because they detect underdetermination.
+The Pass@50 analysis directly addresses this: conditioning on problems the
+model solved in base, the variant hit rate rises sharply (up to 83.3% for
+Qwen2.5-7B-Instruct). The model is capable of finding the answer — it just
+finds the memorized one when it does.
+
+
+--------------------------------------------------------------------------------
+7. DISCUSSION
+--------------------------------------------------------------------------------
+
+Limitations:
+
+1. Binary signal: Our signal is binary (answer matches original or not). We do
+   not measure how a model produces the answer, only whether it matches.
+   Qualitative analysis is in the propagation section but is not the primary
+   metric.
+
+2. AIME answer space: All AIME answers are integers in [0, 999]. Random
+   guessing gives ~0.1% accuracy; our observed rates (0.8-6.7% for 7B,
+   1.7-45% for frontier) are substantially above chance, but the bounded
+   answer space warrants acknowledgment.
+
+3. AIME2026 weak variants: The first-inference frontier evaluation on AIME2026
+   used some variants later identified as weak. These have been replaced in
+   bench9 but frontier re-evaluation is pending; AIME2026 numbers should be
+   treated as upper bounds.
+
+4. Single-rollout frontier evaluation (AIME24+25): Pass@1 may underestimate
+   memorization. Some models with low hit rates at pass@1 may show higher
+   rates at pass@5.
+
+Implications:
+
+Our results suggest AIME 2024 is significantly contaminated in frontier model
+training data — particularly for Claude Opus 4.6, which achieves perfect base
+accuracy and a 45% memorization hit rate. AIME 2026 shows weaker signals,
+suggesting it is less contaminated. Researchers should prefer temporally fresh
+competition problems for capability evaluation, and should consider using
+underdetermined variants as a companion diagnostic.
+
+
+--------------------------------------------------------------------------------
+8. CONCLUSION
+--------------------------------------------------------------------------------
+
+We introduced Math-Imp, a benchmark and methodology for detecting answer recall
+in LLMs evaluated on mathematical competition problems. By constructing
+underdetermined variants with execution-certified impossibility and a 4-stage
+quality pipeline, we provide a clean behavioral signal: any model producing the
+original answer on an underdetermined variant is recalling memorized
+information. We found clear memorization signals in all small (7B) models with
+nonzero base accuracy, and substantial signals in frontier models on older
+benchmarks — most prominently in Claude Opus 4.6, which achieves a 45% unique-
+impossible hit rate on AIME24+25. Models evaluated on AIME 2026 show lower
+signals, consistent with reduced training exposure. Math-Imp is released on
+HuggingFace as thulthula/math-imp-bench9.
+
+
+--------------------------------------------------------------------------------
+THINGS TO RESOLVE BEFORE SUBMISSION
+--------------------------------------------------------------------------------
+
+1. Standardize AIME2026 frontier numbers — re-run on bench9 (strong variants
+   only) and report those. Current numbers are inflated by weak variants.
+
+2. Exclude the "deepseek" (OpenRouter) model entirely — ran out of credits
+   mid-run, results are incomplete and unreliable.
+
+3. Verify GPT-5.2 / Gemini 3 / Grok-4.2 AIME2026 data — all show 0/150
+   original accuracy which is suspect; verify or exclude.
+
+4. Be explicit in each table header about pass@1 vs pass@5 — the two AIME
+   evaluations use different protocols and are not directly comparable.
+
+5. Verify Grok-4 AIME25 — 0/30 original accuracy; confirm whether AIME25 eval
+   actually ran for Grok-4 or was not included.
+
+6. Decide whether to include propagation analysis — adds depth but requires
+   explaining the full 720-unit pipeline. May work better as an appendix.
+
+7. Consider adding a human baseline note: competition students score 0% on
+   underdetermined variants (there is no answer to give), sharpening the
+   contrast with model behavior.
+
+
+--------------------------------------------------------------------------------
+KEY CLAIM CORRECTIONS (do not use these phrasings in the paper)
+--------------------------------------------------------------------------------
+
+WRONG:  "ALL MODELS SCORE 0% on impossible variants"
+RIGHT:  Opus-4.6 hits 45%, Kimi-K2.5 hits 18.3%, most others 0-5%.
+        Only Grok-4 scores exactly 0% among high-performing models.
+
+WRONG:  "impossible variants" (implies contradiction)
+RIGHT:  "underdetermined variants" (missing information, not contradictory)
+
+WRONG:  "benchmark contamination" (implies full problem memorization)
+RIGHT:  "answer recall" (the specific behavior we measure: outputting a* on P~)
+
+WRONG:  "definitively unsolvable" (too strong without qualification)
+RIGHT:  "cannot be solved by reasoning from the given information alone,
+         as verified by execution failure of the modified code"
+
+================================================================================
+END OF DRAFT
+================================================================================

@@ -1,0 +1,7 @@
+model,node_correct,node_total,node_accuracy,edge_correct,edge_total,edge_accuracy,total_correct,total,total_accuracy
+DeepSeek-LLM-7B-Chat,0,30,0.0,0,30,0.0,0,90,0.0
+DeepSeek-Math-7B-Instruct,0,30,0.0,0,30,0.0,3,90,3.3
+InternLM2-Math-7B,0,30,0.0,0,30,0.0,0,90,0.0
+InternLM2-Chat-7B,0,30,0.0,0,30,0.0,0,90,0.0
+Qwen2.5-7B-Instruct,0,30,0.0,0,30,0.0,6,90,6.7
+Qwen2.5-Math-7B-Instruct,0,30,0.0,1,30,3.3,6,90,6.7

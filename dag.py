@@ -14,7 +14,8 @@ import boto3  # type: ignore
 AWS_REGION = "us-east-1"
 AWS_ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY_ID", "YOUR_AWS_ACCESS_KEY_HERE")
 AWS_SECRET_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "YOUR_AWS_SECRET_KEY_HERE")
-MODEL_NAME = "us.anthropic.claude-opus-4-6-v1"
+MODEL_NAME = "us.anthropic.claude-opus-4-6-v1"  # overridden by --model arg
+ANSWER_COL = "answer"  # overridden by --answer-col arg
 
 # =============================================================================
 # LOAD DATASET (configured via command-line args in main)
@@ -934,12 +935,12 @@ def process_problem(problem_data: dict, max_retries: int = 5, stop_on_first: boo
         stop_on_first: If True, stop after first successful variation
     """
 
-    # AIME 2025 dataset fields
+    # Dataset fields (answer column configurable via --answer-col)
     question = problem_data['problem']
     solution = problem_data.get('solution', "")  # AIME may not have solutions
     if isinstance(solution, list):
         solution = solution[0] if solution else ""
-    final_answer = str(problem_data['answer'])  # AIME answers are integers
+    final_answer = str(problem_data[ANSWER_COL])  # column name set by --answer-col
 
     # OlympiadBench dataset fields (for reference)
     # question = problem_data['question']
@@ -1164,7 +1165,22 @@ if __name__ == "__main__":
     parser.add_argument("--force", action="store_true", help="Re-process even if result file exists")
     parser.add_argument("--extract-clean", action="store_true", help="Extract clean results from existing results folder and exit")
     parser.add_argument("--clean-dir", type=str, default="clean_results", help="Output directory for clean results")
+    parser.add_argument("--model", type=str, default="opus", choices=["sonnet", "opus"],
+                        help="Model to use: sonnet or opus (default: opus)")
+    parser.add_argument("--dataset", type=str, default=None,
+                        help="Custom HuggingFace dataset (e.g., thulthula/AIME2026). Overrides --split/--level.")
+    parser.add_argument("--answer-col", type=str, default="answer",
+                        help="Column name for the answer field (default: answer)")
     args = parser.parse_args()
+
+    # Set model name based on --model arg
+    MODEL_NAMES = {
+        "sonnet": "us.anthropic.claude-sonnet-4-6",
+        "opus": "us.anthropic.claude-opus-4-6-v1",
+    }
+    MODEL_NAME = MODEL_NAMES[args.model]
+    ANSWER_COL = args.answer_col
+    print(f"Using model: {args.model} ({MODEL_NAME})")
 
     # Handle extract-clean mode
     if args.extract_clean:
@@ -1172,18 +1188,23 @@ if __name__ == "__main__":
         exit(0)
 
     # Load dataset based on arguments
-    print(f"Loading dataset: thulthula/math-bench (split={args.split})")
-    full_dataset = load_dataset("thulthula/math-bench", split=args.split)
-    print(f"Total problems in {args.split}: {len(full_dataset)}")
-
-    # Filter by level if specified
-    if args.level.lower() == 'all':
-        dataset_to_use = full_dataset
-        print(f"Using all levels: {len(dataset_to_use)} problems")
+    if args.dataset:
+        print(f"Loading custom dataset: {args.dataset}")
+        dataset_to_use = load_dataset(args.dataset, split="train")
+        print(f"Total problems: {len(dataset_to_use)}")
     else:
-        level_str = f"Level {args.level}"
-        dataset_to_use = full_dataset.filter(lambda x: x.get('level') == level_str)
-        print(f"Filtered to {level_str}: {len(dataset_to_use)} problems")
+        print(f"Loading dataset: thulthula/math-bench (split={args.split})")
+        full_dataset = load_dataset("thulthula/math-bench", split=args.split)
+        print(f"Total problems in {args.split}: {len(full_dataset)}")
+
+        # Filter by level if specified
+        if args.level.lower() == 'all':
+            dataset_to_use = full_dataset
+            print(f"Using all levels: {len(dataset_to_use)} problems")
+        else:
+            level_str = f"Level {args.level}"
+            dataset_to_use = full_dataset.filter(lambda x: x.get('level') == level_str)
+            print(f"Filtered to {level_str}: {len(dataset_to_use)} problems")
 
     print(f"Columns: {dataset_to_use.column_names}")
     print()
