@@ -23,6 +23,9 @@ checklist/**/checklist_analysis*/
 # Archive folder (frozen old data)
 archive/
 
+# Paper (kept local only)
+paper/
+
 # OS files
 .DS_Store
 Thumbs.db
